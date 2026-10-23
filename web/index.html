@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text-to-SQL Agent — Recorded Runs</title>
+<style>
+  :root { --ink:#1c2733; --muted:#5b6b7b; --accent:#0b6e4f; --bg:#f6f8f7; --card:#ffffff; --code:#eef3f0; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Georgia, 'Times New Roman', serif; color:var(--ink); background:var(--bg); }
+  header { padding:3rem 1.5rem 1.5rem; text-align:center; }
+  header h1 { margin:0 0 .5rem; font-size:2.4rem; }
+  header p { color:var(--muted); max-width:44rem; margin:.25rem auto; line-height:1.5; }
+  main { max-width:56rem; margin:0 auto; padding:0 1.5rem 3rem; }
+  .stats { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin:1.5rem 0 2.5rem; }
+  .stat { background:var(--card); border:1px solid #dde5e0; border-radius:.75rem; padding:1rem 1.5rem; text-align:center; min-width:10rem; }
+  .stat b { display:block; font-size:1.6rem; color:var(--accent); }
+  .stat span { color:var(--muted); font-size:.9rem; }
+  section.example { background:var(--card); border:1px solid #dde5e0; border-radius:.75rem; padding:1.5rem; margin-bottom:1.5rem; }
+  section.example h2 { margin:0 0 .75rem; font-size:1.15rem; }
+  section.example h2::before { content:"Q: "; color:var(--accent); }
+  code.sql { display:block; background:var(--code); border-radius:.5rem; padding:.9rem 1rem; font-family:'Courier New', monospace; font-size:.85rem; line-height:1.45; white-space:pre-wrap; word-break:break-word; margin-bottom:1rem; }
+  table { border-collapse:collapse; width:100%; font-size:.95rem; }
+  th, td { border-bottom:1px solid #e3eae6; padding:.45rem .6rem; text-align:left; }
+  th { color:var(--accent); }
+  footer { text-align:center; color:var(--muted); padding:0 1.5rem 3rem; font-size:.9rem; line-height:1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Text-to-SQL Agent</h1>
+  <p>Natural-language questions over a bundled SQLite sample database.
+     Schema introspection &rarr; SQL generation &rarr; read-only validation &rarr;
+     execution &rarr; self-correction on error. Everything below is recorded
+     output from real runs of the CLI against the seeded sample database
+     (6,424 rows, deterministic seed 42) — no live queries happen on this page.</p>
+  <div class="stats">
+    <div class="stat"><b>20 / 20</b><span>eval questions passed</span></div>
+    <div class="stat"><b>100.0%</b><span>execution accuracy</span></div>
+    <div class="stat"><b>37</b><span>pytest tests passing</span></div>
+    <div class="stat"><b>6,424</b><span>rows in the sample database</span></div>
+  </div>
+</header>
+<main>
+
+  <section class="example">
+    <h2>How many active subscribers per plan?</h2>
+    <code class="sql">SELECT p.plan_name, COUNT(*) AS active_subscribers FROM subscriptions s JOIN plans p ON p.plan_id = s.plan_id WHERE s.status = 'active' GROUP BY p.plan_name ORDER BY p.plan_name LIMIT 100</code>
+    <table>
+      <tr><th>plan_name</th><th>active_subscribers</th></tr>
+      <tr><td>Basic</td><td>67</td></tr>
+      <tr><td>Family</td><td>53</td></tr>
+      <tr><td>Premium</td><td>108</td></tr>
+      <tr><td>Standard</td><td>110</td></tr>
+      <tr><td>Unlimited</td><td>59</td></tr>
+    </table>
+  </section>
+
+  <section class="example">
+    <h2>What is the total revenue from paid invoices?</h2>
+    <code class="sql">SELECT ROUND(SUM(amount), 2) AS total_revenue FROM invoices WHERE status = 'paid' LIMIT 100</code>
+    <table>
+      <tr><th>total_revenue</th></tr>
+      <tr><td>100394.85</td></tr>
+    </table>
+  </section>
+
+  <section class="example">
+    <h2>Who are the top 5 customers by total paid invoice amount?</h2>
+    <code class="sql">SELECT c.full_name, ROUND(SUM(i.amount), 2) AS total_paid FROM invoices i JOIN customers c ON c.customer_id = i.customer_id WHERE i.status = 'paid' GROUP BY c.customer_id, c.full_name ORDER BY total_paid DESC, c.full_name ASC LIMIT 5</code>
+    <table>
+      <tr><th>full_name</th><th>total_paid</th></tr>
+      <tr><td>Chen Garcia</td><td>750.8</td></tr>
+      <tr><td>Fatima Khan</td><td>713.2</td></tr>
+      <tr><td>Noah Novak</td><td>707.85</td></tr>
+      <tr><td>Anita Ali</td><td>666.65</td></tr>
+      <tr><td>Ravi Dubois</td><td>647.8</td></tr>
+    </table>
+  </section>
+
+  <section class="example">
+    <h2>What is the revenue per plan from paid invoices?</h2>
+    <code class="sql">SELECT p.plan_name, ROUND(SUM(i.amount), 2) AS revenue FROM invoices i JOIN subscriptions s ON s.subscription_id = i.subscription_id JOIN plans p ON p.plan_id = s.plan_id WHERE i.status = 'paid' GROUP BY p.plan_name ORDER BY p.plan_name LIMIT 100</code>
+    <table>
+      <tr><th>plan_name</th><th>revenue</th></tr>
+      <tr><td>Basic</td><td>4389.0</td></tr>
+      <tr><td>Family</td><td>30190.05</td></tr>
+      <tr><td>Premium</td><td>28260.75</td></tr>
+      <tr><td>Standard</td><td>15719.45</td></tr>
+      <tr><td>Unlimited</td><td>21835.6</td></tr>
+    </table>
+  </section>
+
+  <section class="example">
+    <h2>Which country has the most customers?</h2>
+    <code class="sql">SELECT country, COUNT(*) AS customer_count FROM customers GROUP BY country ORDER BY customer_count DESC, country ASC LIMIT 1</code>
+    <table>
+      <tr><th>country</th><th>customer_count</th></tr>
+      <tr><td>Canada</td><td>67</td></tr>
+    </table>
+  </section>
+
+  <section class="example">
+    <h2>What is the average data usage per plan?</h2>
+    <code class="sql">SELECT p.plan_name, ROUND(AVG(u.data_used_gb), 2) AS avg_data_used_gb FROM usage_records u JOIN subscriptions s ON s.subscription_id = u.subscription_id JOIN plans p ON p.plan_id = s.plan_id GROUP BY p.plan_name ORDER BY p.plan_name LIMIT 100</code>
+    <table>
+      <tr><th>plan_name</th><th>avg_data_used_gb</th></tr>
+      <tr><td>Basic</td><td>3.2</td></tr>
+      <tr><td>Family</td><td>191.15</td></tr>
+      <tr><td>Premium</td><td>65.03</td></tr>
+      <tr><td>Standard</td><td>16.41</td></tr>
+      <tr><td>Unlimited</td><td>656.69</td></tr>
+    </table>
+  </section>
+
+  <section class="example">
+    <h2>Self-correction, recorded from the test suite</h2>
+    <code class="sql">Attempt 1: SELECT customer_name FROM customers
+-&gt; execution failed: no such column: customer_name
+Attempt 2 (error fed back to the generator):
+SELECT COUNT(*) AS customer_count FROM customers LIMIT 100
+-&gt; success, rows: [(500,)]</code>
+    <table>
+      <tr><th>success</th><th>attempts</th><th>final answer</th></tr>
+      <tr><td>True</td><td>2</td><td>500 customers</td></tr>
+    </table>
+  </section>
+
+</main>
+<footer>
+  Eval summary: 20 questions, execution accuracy 20/20 = 100.0% (agent result
+  sets compared against hand-written reference queries on the same database).
+  Sample database: customers 500 &middot; plans 5 &middot; subscriptions 644 &middot;
+  invoices 2,893 &middot; usage_records 1,932 &middot; support_tickets 450.
+  Safety: single-statement SELECT-only validation, enforced LIMIT, read-only
+  SQLite connection. This page is fully static and self-contained.
+</footer>
+</body>
+</html>
